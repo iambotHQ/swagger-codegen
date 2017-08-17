@@ -299,10 +299,13 @@ public class RustClientCodegen extends DefaultCodegen implements CodegenConfig {
         if (languageSpecificPrimitives.contains(swaggerType)) {
             return swaggerType;
         }
-
-        // return fully-qualified model name
-        // ::models::{{classnameFile}}::{{classname}}
-        return "::models::" + toModelName(swaggerType);
+        if(swaggerType==null || swaggerType.isEmpty()){
+            return "Option<String>";
+        }else{
+            // return fully-qualified model name
+            // ::models::{{classnameFile}}::{{classname}}
+            return "::models::" + toModelName(swaggerType);
+        }
     }
 
     @Override

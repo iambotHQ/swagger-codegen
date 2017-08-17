@@ -24,7 +24,7 @@ impl<C: hyper::client::Connect> {{{classname}}}Client<C> {
 pub trait {{classname}} {
 {{#operations}}
 {{#operation}}
-    fn {{{operationId}}}(&self, {{#allParams}}{{paramName}}: {{#isString}}&str{{/isString}}{{^isString}}{{^isPrimitiveType}}{{^isContainer}}::models::{{/isContainer}}{{/isPrimitiveType}}{{{dataType}}}{{/isString}}{{#hasMore}}, {{/hasMore}}{{/allParams}}) -> Box<Future<Item = {{^returnType}}(){{/returnType}}{{#returnType}}{{{returnType}}}{{/returnType}}, Error = Error>>;
+    fn {{{operationId}}}(&self, {{#allParams}}{{paramName}}: {{^required}}Option<{{/required}}{{#isString}}&str{{/isString}}{{^isString}}{{^isPrimitiveType}}{{^isContainer}}::models::{{/isContainer}}{{/isPrimitiveType}}{{{dataType}}}{{/isString}}{{^required}}>{{/required}}{{#hasMore}}, {{/hasMore}}{{/allParams}}) -> Box<Future<Item = {{^returnType}}(){{/returnType}}{{#returnType}}{{{returnType}}}{{/returnType}}, Error = Error>>;
 {{/operation}}
 {{/operations}}
 }
@@ -33,7 +33,7 @@ pub trait {{classname}} {
 impl<C: hyper::client::Connect>{{classname}} for {{classname}}Client<C> {
 {{#operations}}
 {{#operation}}
-    fn {{{operationId}}}(&self, {{#allParams}}{{paramName}}: {{#isString}}&str{{/isString}}{{^isString}}{{^isPrimitiveType}}{{^isContainer}}::models::{{/isContainer}}{{/isPrimitiveType}}{{{dataType}}}{{/isString}}{{#hasMore}}, {{/hasMore}}{{/allParams}}) -> Box<Future<Item = {{^returnType}}(){{/returnType}}{{#returnType}}{{{.}}}{{/returnType}}, Error = Error>> {
+    fn {{{operationId}}}(&self, {{#allParams}}{{paramName}}: {{^required}}Option<{{/required}}{{#isString}}&str{{/isString}}{{^isString}}{{^isPrimitiveType}}{{^isContainer}}::models::{{/isContainer}}{{/isPrimitiveType}}{{{dataType}}}{{/isString}}{{^required}}>{{/required}}{{#hasMore}}, {{/hasMore}}{{/allParams}}) -> Box<Future<Item = {{^returnType}}(){{/returnType}}{{#returnType}}{{{.}}}{{/returnType}}, Error = Error>> {
         let configuration: &configuration::Configuration<C> = self.configuration.borrow();
 
         let method = hyper::Method::{{httpMethod}};
@@ -42,12 +42,20 @@ impl<C: hyper::client::Connect>{{classname}} for {{classname}}Client<C> {
         let uri_str = format!("{}{{{path}}}", configuration.base_path{{#pathParams}}, {{baseName}}={{paramName}}{{#isListContainer}}.join(",").as_ref(){{/isListContainer}}{{/pathParams}});
         {{/hasQueryParams}}
         {{#hasQueryParams}}
-        let query = ::url::form_urlencoded::Serializer::new(String::new())
-            {{#queryParams}}
-            .append_pair("{{baseName}}", &{{paramName}}{{#isListContainer}}.join(","){{/isListContainer}}.to_string())
-            {{/queryParams}}
-            .finish();
-        let uri_str = format!("{}{{{path}}}{}", configuration.base_path, query{{#pathParams}}, {{baseName}}={{paramName}}{{#isListContainer}}.join(",").as_ref(){{/isListContainer}}{{/pathParams}});
+        let mut query = ::url::form_urlencoded::Serializer::new(String::new());
+        {{#queryParams}}
+        {{^required}}
+        match {{paramName}}{
+           Some(value)=>{query.append_pair("{{baseName}}", &value{{#isListContainer}}.join(","){{/isListContainer}}.to_string());},
+           None=>{},
+        }
+        {{/required}}
+        {{#required}}
+        query.append_pair("{{baseName}}", &{{paramName}}{{#isListContainer}}.join(","){{/isListContainer}}.to_string());
+        {{/required}}
+        {{/queryParams}}
+        let finished_query=query.finish();
+        let uri_str = format!("{}{{{path}}}{}", configuration.base_path, finished_query{{#pathParams}}, {{baseName}}={{paramName}}{{#isListContainer}}.join(","){{/isListContainer}}{{/pathParams}});
         {{/hasQueryParams}}
 
         let uri = uri_str.parse();
@@ -61,14 +69,22 @@ impl<C: hyper::client::Connect>{{classname}} for {{classname}}Client<C> {
         {
             let mut headers = req.headers_mut();
             {{#headerParams}}
-            headers.set_raw("{{baseName}}", {{paramName}}{{#isListContainer}}.join(",").as_ref(){{/isListContainer}});
+            {{^required}}
+            match {{paramName}}{
+               Some(value)=>{headers.set_raw("{{baseName}}", value{{#isListContainer}}.join(",").as_ref(){{/isListContainer}});},
+               None=>{},
+            }
+            {{/required}}
+            {{#required}}
+            headers.set_raw("{{baseName}}", &{{paramName}}{{#isListContainer}}.join(",").as_ref(){{/isListContainer}});
+            {{/required}}
             {{/headerParams}}
         }
         {{/hasHeaderParams}}
 
         {{#hasBodyParam}}
         {{#bodyParams}}
-        let serialized = serde_json::to_string(&body).unwrap();
+        let serialized = serde_json::to_string(&body).map_?;
         req.headers_mut().set(hyper::header::ContentType::json());
         req.headers_mut().set(hyper::header::ContentLength(serialized.len() as u64));
         req.set_body(serialized);

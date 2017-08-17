@@ -37,7 +37,7 @@ impl {{classname}} {
     self
   }
 
-  pub fn {{name}}(&self) -> &{{datatype}} {
+  pub fn {{name}}(&self) -> &{{^required}}Option<{{/required}}{{{datatype}}}{{^required}}>{{/required}} {
     &self.{{name}}
   }
 
