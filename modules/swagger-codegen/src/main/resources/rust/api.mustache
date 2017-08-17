@@ -55,7 +55,7 @@ impl<C: hyper::client::Connect>{{classname}} for {{classname}}Client<C> {
         {{/required}}
         {{/queryParams}}
         let finished_query=query.finish();
-        let uri_str = format!("{}{{{path}}}{}", configuration.base_path, finished_query{{#pathParams}}, {{baseName}}={{paramName}}{{#isListContainer}}.join(","){{/isListContainer}}{{/pathParams}});
+        let uri_str = format!("{}{{{path}}}?{}", configuration.base_path, finished_query{{#pathParams}}, {{baseName}}={{paramName}}{{#isListContainer}}.join(","){{/isListContainer}}{{/pathParams}});
         {{/hasQueryParams}}
 
         let uri = uri_str.parse();
